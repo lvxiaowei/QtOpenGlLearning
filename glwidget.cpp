@@ -60,9 +60,10 @@ static const char *fragmentShaderSource =
         " out vec4 fragColor;"
         " in vec3 ourColor;"
         " in vec2 TexCoord;"
-        " uniform sampler2D ourTexture;"
+        " uniform sampler2D texture1;"
+        " uniform sampler2D texture2;"
         " void main() {"
-        "   fragColor =  texture(ourTexture, TexCoord);"
+        "   fragColor = mix(texture(texture1, TexCoord), texture(texture2, TexCoord), 0.2);"
         " }";
 
 GLfloat vertices[] = {
@@ -111,10 +112,16 @@ void GLWidget::initializeGL()
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ebo.bufferId());
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-
     //纹理相关代码初始化
-    m_texture = new QOpenGLTexture(QImage(":/wall.jpg"));
-    glBindTexture(GL_TEXTURE_2D, m_texture->textureId());
+    m_texture1 = new QOpenGLTexture(QImage(":/container.jpg"));
+    glBindTexture(GL_TEXTURE_2D, m_texture1->textureId());
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    m_texture2 = new QOpenGLTexture(QImage(":/awesomeface.png").mirrored());
+    glBindTexture(GL_TEXTURE_2D, m_texture2->textureId());
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -145,7 +152,11 @@ void GLWidget::paintGL()
     m_program->bind();
 
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, m_texture->textureId());
+    glBindTexture(GL_TEXTURE_2D, m_texture1->textureId());
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, m_texture2->textureId());
+    m_program->setUniformValue("texture1", 0);
+    m_program->setUniformValue("texture2", 1);
 
     //glDrawArrays(GL_TRIANGLES, 0, 3);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);

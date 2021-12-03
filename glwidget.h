@@ -36,7 +36,7 @@ private:
     QOpenGLVertexArrayObject m_vao;
     QOpenGLBuffer m_vbo;
     QOpenGLBuffer m_ebo;
-    QOpenGLTexture *m_texture;
+    QOpenGLTexture *m_texture1, *m_texture2;
     QOpenGLShaderProgram *m_program;
 
     QMatrix4x4 m_camera;
