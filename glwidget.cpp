@@ -45,28 +45,32 @@ void GLWidget::cleanup()
 static const char *vertexShaderSource =
         "#version 330\n"
         "layout (location = 0) in vec3 posVertex;\n"
+        "layout (location = 1) in vec3 aColor;\n" // 颜色变量的属性位置值为 1
+        "out vec3 ourColor;\n"
         "void main() {\n"
         "   gl_Position = vec4(posVertex, 1.0);\n"
+        "   ourColor = aColor;\n"
         "}\n";
 
 static const char *fragmentShaderSource =
         " #version 330\n"
         " out vec4 fragColor;"
+        " in vec3 ourColor;"
         " void main() {"
-        "   fragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);"
+        "   fragColor = vec4(ourColor, 1.0f);"
         " }";
 
 GLfloat vertices[] = {
-    0.5f, 0.5f, 0.0f,   // 右上角
-    0.5f, -0.5f, 0.0f,  // 右下角
-    -0.5f, -0.5f, 0.0f, // 左下角
-    -0.5f, 0.5f, 0.0f   // 左上角
+    // 位置              // 颜色
+     0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,   // 右下
+    -0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,   // 左下
+     0.0f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f    // 顶部
 };
 
-GLenum indices[] = {
-    0, 1, 3, // 第一个三角形
-    1, 2, 3  // 第二个三角形
-};
+//GLenum indices[] = {
+//    0, 1, 3, // 第一个三角形
+//    1, 2, 3  // 第二个三角形
+//};
 
 void GLWidget::initializeGL()
 {
@@ -95,16 +99,17 @@ void GLWidget::initializeGL()
     m_vao.bind();
 
     //定点属性绑定
-    QOpenGLFunctions *f = QOpenGLContext::currentContext()->functions();
+    glBindBuffer(GL_ARRAY_BUFFER, m_vbo.bufferId());
+    glBufferData(GL_ARRAY_BUFFER, 6 * 3 * sizeof(GLfloat), vertices, GL_STATIC_DRAW);
 
-    f->glBindBuffer(GL_ARRAY_BUFFER, m_vbo.bufferId());
-    f->glBufferData(GL_ARRAY_BUFFER, 4 * 3 * sizeof(GLfloat), vertices, GL_STATIC_DRAW);
+    //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ebo.bufferId());
+    //glBufferData(GL_ELEMENT_ARRAY_BUFFER, 2 * 3 * sizeof(GLenum), indices, GL_STATIC_DRAW);
 
-    f->glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ebo.bufferId());
-    f->glBufferData(GL_ELEMENT_ARRAY_BUFFER, 2 * 3 * sizeof(GLenum), indices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)0);
 
-    f->glEnableVertexAttribArray(0);
-    f->glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)(3 * sizeof (GLfloat)));
 
     m_vao.release();
     m_program->release();
@@ -123,8 +128,8 @@ void GLWidget::paintGL()
     QOpenGLVertexArrayObject::Binder vaoBinder(&m_vao);
     m_program->bind();
 
-    //glDrawArrays(GL_TRIANGLES, 0, 6);
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    //glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
     m_program->release();
 }
