@@ -33,7 +33,8 @@ private:
     QSharedDataPointer<GLWidgetData> data;
 
     QOpenGLVertexArrayObject m_vao;
-    QOpenGLBuffer m_logoVbo;
+    QOpenGLBuffer m_vbo;
+    QOpenGLBuffer m_ebo;
     QOpenGLShaderProgram *m_program;
 
     QMatrix4x4 m_camera;
