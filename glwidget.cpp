@@ -45,32 +45,38 @@ void GLWidget::cleanup()
 static const char *vertexShaderSource =
         "#version 330\n"
         "layout (location = 0) in vec3 posVertex;\n"
-        "layout (location = 1) in vec3 aColor;\n" // 颜色变量的属性位置值为 1
+        "layout (location = 1) in vec3 aColor;\n"
+        "layout (location = 2) in vec2 aTexCoord;"
         "out vec3 ourColor;\n"
+        "out vec2 TexCoord;"
         "void main() {\n"
         "   gl_Position = vec4(posVertex, 1.0);\n"
         "   ourColor = aColor;\n"
+        "   TexCoord = aTexCoord;"
         "}\n";
 
 static const char *fragmentShaderSource =
         " #version 330\n"
         " out vec4 fragColor;"
         " in vec3 ourColor;"
+        " in vec2 TexCoord;"
+        " uniform sampler2D ourTexture;"
         " void main() {"
-        "   fragColor = vec4(ourColor, 1.0f);"
+        "   fragColor =  texture(ourTexture, TexCoord);"
         " }";
 
 GLfloat vertices[] = {
-    // 位置              // 颜色
-     0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,   // 右下
-    -0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,   // 左下
-     0.0f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f    // 顶部
+    //---- 位置 ----       ---- 颜色 ----     - 纹理坐标 -
+    0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,   // 右上
+    0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,   // 右下
+    -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,   // 左下
+    -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f    // 左上
 };
 
-//GLenum indices[] = {
-//    0, 1, 3, // 第一个三角形
-//    1, 2, 3  // 第二个三角形
-//};
+GLenum indices[] = {
+    0, 1, 3, // 第一个三角形
+    1, 2, 3  // 第二个三角形
+};
 
 void GLWidget::initializeGL()
 {
@@ -100,16 +106,26 @@ void GLWidget::initializeGL()
 
     //定点属性绑定
     glBindBuffer(GL_ARRAY_BUFFER, m_vbo.bufferId());
-    glBufferData(GL_ARRAY_BUFFER, 6 * 3 * sizeof(GLfloat), vertices, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER,  sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-    //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ebo.bufferId());
-    //glBufferData(GL_ELEMENT_ARRAY_BUFFER, 2 * 3 * sizeof(GLenum), indices, GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ebo.bufferId());
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+
+    //纹理相关代码初始化
+    m_texture = new QOpenGLTexture(QImage(":/wall.jpg"));
+    glBindTexture(GL_TEXTURE_2D, m_texture->textureId());
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)0);
-
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)(3 * sizeof (GLfloat)));
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (void*)0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (void*)(3 * sizeof (GLfloat)));
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (void*)(6 * sizeof (GLfloat)));
 
     m_vao.release();
     m_program->release();
@@ -128,8 +144,11 @@ void GLWidget::paintGL()
     QOpenGLVertexArrayObject::Binder vaoBinder(&m_vao);
     m_program->bind();
 
-    glDrawArrays(GL_TRIANGLES, 0, 3);
-    //glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, m_texture->textureId());
+
+    //glDrawArrays(GL_TRIANGLES, 0, 3);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
     m_program->release();
 }

@@ -6,6 +6,7 @@
 #include <QSharedDataPointer>
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLBuffer>
+#include <QOpenGLTexture>
 #include <QMatrix4x4>
 
 class GLWidgetData;
@@ -35,6 +36,7 @@ private:
     QOpenGLVertexArrayObject m_vao;
     QOpenGLBuffer m_vbo;
     QOpenGLBuffer m_ebo;
+    QOpenGLTexture *m_texture;
     QOpenGLShaderProgram *m_program;
 
     QMatrix4x4 m_camera;
