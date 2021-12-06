@@ -49,9 +49,11 @@ static const char *vertexShaderSource =
         "layout (location = 2) in vec2 aTexCoord;"
         "out vec3 ourColor;\n"
         "out vec2 TexCoord;"
-        "uniform mat4 transform;"
+        "uniform mat4 model;"
+        "uniform mat4 view;"
+        "uniform mat4 projection;"
         "void main() {\n"
-        "   gl_Position = transform * vec4(posVertex, 1.0f);\n"
+        "   gl_Position = projection * view * model * vec4(posVertex, 1.0f);\n"
         "   ourColor = aColor;\n"
         "   TexCoord = aTexCoord;"
         "}\n";
@@ -169,13 +171,25 @@ void GLWidget::paintGL()
     m_program->setUniformValue("texture1", 0);
     m_program->setUniformValue("texture2", 1);
 
+
     //设置变换矩阵
-    glm::mat4 trans = glm::mat4(1.0f);  //单位矩阵
-    trans = glm::translate(trans, glm::vec3(0.5, -0.5, 0.0f)); // 沿x、y平移
-    trans = glm::rotate(trans, glm::radians(static_cast <float>(t)), glm::vec3(0.0, 0.0, 1.0)); //逆时针旋转90°
-    //trans = glm::scale(trans, glm::vec3(0.5, 0.5, 0.5)); //缩放0.5倍，变成原来的一半
-    unsigned int transformLoc = m_program->uniformLocation("transform");
-    glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
+    glm::mat4 model = glm::mat4(1.0f);;
+    model = glm::rotate(model, glm::radians(-55.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+    unsigned int transformLoc_i = m_program->uniformLocation("model");
+    glUniformMatrix4fv(transformLoc_i, 1, GL_FALSE, glm::value_ptr(model));
+
+    //观察矩阵，将场景往前移动一点
+    glm::mat4 view = glm::mat4(1.0f);
+    // 注意，我们将矩阵向我们要进行移动场景的反方向移动。
+    view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+    unsigned int view_i = m_program->uniformLocation("view");
+    glUniformMatrix4fv(view_i, 1, GL_FALSE, glm::value_ptr(view));
+
+    //投影矩阵
+    glm::mat4 projection = glm::mat4(1.0f);
+    projection = glm::perspective(glm::radians(45.0f), GLfloat(width()) / height(), 0.1f, 100.0f);
+    unsigned int projection_i = m_program->uniformLocation("projection");
+    glUniformMatrix4fv(projection_i, 1, GL_FALSE, glm::value_ptr(projection));
 
     //glDrawArrays(GL_TRIANGLES, 0, 3);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
