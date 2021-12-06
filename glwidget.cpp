@@ -49,8 +49,9 @@ static const char *vertexShaderSource =
         "layout (location = 2) in vec2 aTexCoord;"
         "out vec3 ourColor;\n"
         "out vec2 TexCoord;"
+        "uniform mat4 transform;"
         "void main() {\n"
-        "   gl_Position = vec4(posVertex, 1.0);\n"
+        "   gl_Position = transform * vec4(posVertex, 1.0f);\n"
         "   ourColor = aColor;\n"
         "   TexCoord = aTexCoord;"
         "}\n";
@@ -81,6 +82,15 @@ GLenum indices[] = {
 
 void GLWidget::initializeGL()
 {
+    QTimer *timer = new QTimer(this);
+    timer->setInterval(50);
+    connect(timer, &QTimer::timeout, [=]{
+        t +=10;
+        t = t%360;
+        update();
+    });
+    timer->start();
+
     connect(context(), &QOpenGLContext::aboutToBeDestroyed, this, &GLWidget::cleanup);
 
     initializeOpenGLFunctions();
@@ -151,12 +161,21 @@ void GLWidget::paintGL()
     QOpenGLVertexArrayObject::Binder vaoBinder(&m_vao);
     m_program->bind();
 
+    //绑定纹理
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, m_texture1->textureId());
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, m_texture2->textureId());
     m_program->setUniformValue("texture1", 0);
     m_program->setUniformValue("texture2", 1);
+
+    //设置变换矩阵
+    glm::mat4 trans = glm::mat4(1.0f);  //单位矩阵
+    trans = glm::translate(trans, glm::vec3(0.5, -0.5, 0.0f)); // 沿x、y平移
+    trans = glm::rotate(trans, glm::radians(static_cast <float>(t)), glm::vec3(0.0, 0.0, 1.0)); //逆时针旋转90°
+    //trans = glm::scale(trans, glm::vec3(0.5, 0.5, 0.5)); //缩放0.5倍，变成原来的一半
+    unsigned int transformLoc = m_program->uniformLocation("transform");
+    glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
 
     //glDrawArrays(GL_TRIANGLES, 0, 3);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);

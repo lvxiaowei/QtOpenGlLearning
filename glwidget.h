@@ -8,6 +8,13 @@
 #include <QOpenGLBuffer>
 #include <QOpenGLTexture>
 #include <QMatrix4x4>
+#include <QTimer>
+
+#include <iostream>
+
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 class GLWidgetData;
 
@@ -39,6 +46,7 @@ private:
     QOpenGLTexture *m_texture1, *m_texture2;
     QOpenGLShaderProgram *m_program;
 
+    int t;
     QMatrix4x4 m_camera;
     QMatrix4x4 m_proj;
     QMatrix4x4 m_world;
