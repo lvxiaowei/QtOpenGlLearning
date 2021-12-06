@@ -130,11 +130,11 @@ GLenum indices[] = {
 void GLWidget::initializeGL()
 {
     QTimer *timer = new QTimer(this);
-    timer->setInterval(10);
+    timer->setInterval(50);
     connect(timer, &QTimer::timeout, [=]{
-        t +=10;
+        t +=5;
         t = t%360;
-        //update();
+        update();
     });
     timer->start();
 
@@ -211,18 +211,18 @@ void GLWidget::paintGL()
     m_program->setUniformValue("texture1", 0);
     m_program->setUniformValue("texture2", 1);
 
-    glm::mat4 view          = glm::mat4(1.0f);
-    glm::mat4 projection    = glm::mat4(1.0f);
-
-    view  = glm::translate(view, glm::vec3(0.0f, 0.0f, -5.0f));
-    projection = glm::perspective(glm::radians(45.0f), GLfloat(width()) / height(), 0.1f, 100.0f);
-
+    glm::mat4 view = glm::mat4(1.0f);
+    float radius = 10.0f;
+    float camX = sin((t * M_PI)/180) * radius;
+    float camZ = cos((t * M_PI)/180) * radius;
+    view = glm::lookAt(glm::vec3(camX, 0.0, camZ), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
     unsigned int view_i = m_program->uniformLocation("view");
     glUniformMatrix4fv(view_i, 1, GL_FALSE, glm::value_ptr(view));
 
+    glm::mat4 projection    = glm::mat4(1.0f);
+    projection = glm::perspective(glm::radians(45.0f), GLfloat(width()) / height(), 0.1f, 100.0f);
     unsigned int projection_i = m_program->uniformLocation("projection");
     glUniformMatrix4fv(projection_i, 1, GL_FALSE, glm::value_ptr(projection));
-
 
     for(int i=0; i < 10; ++i)
     {
