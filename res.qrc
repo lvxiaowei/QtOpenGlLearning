@@ -3,5 +3,8 @@
         <file>wall.jpg</file>
         <file>container.jpg</file>
         <file>awesomeface.png</file>
+        <file>vertexShaderSource.vert</file>
+        <file>fragmentShaderSource.frag</file>
     </qresource>
+    <qresource prefix="/opengl"/>
 </RCC>

@@ -42,29 +42,6 @@ void GLWidget::cleanup()
     doneCurrent();
 }
 
-static const char *vertexShaderSource =
-        "#version 330\n"
-        "layout (location = 0) in vec3 posVertex;\n"
-        "layout (location = 1) in vec2 aTexCoord;"
-        "out vec2 TexCoord;"
-        "uniform mat4 model;"
-        "uniform mat4 view;"
-        "uniform mat4 projection;"
-        "void main() {\n"
-        "   gl_Position = projection * view * model * vec4(posVertex, 1.0f);\n"
-        "   TexCoord = aTexCoord;"
-        "}\n";
-
-static const char *fragmentShaderSource =
-        " #version 330\n"
-        " out vec4 fragColor;"
-        " in vec2 TexCoord;"
-        " uniform sampler2D texture1;"
-        " uniform sampler2D texture2;"
-        " void main() {"
-        "   fragColor = mix(texture(texture1, TexCoord), texture(texture2, TexCoord), 0.2);"
-        " }";
-
 GLfloat vertices[] = {
     -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
     0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
@@ -130,9 +107,9 @@ GLenum indices[] = {
 void GLWidget::initializeGL()
 {
     QTimer *timer = new QTimer(this);
-    timer->setInterval(50);
+    timer->setInterval(100);
     connect(timer, &QTimer::timeout, [=]{
-        t +=5;
+        t +=1;
         t = t%360;
         update();
     });
@@ -144,8 +121,9 @@ void GLWidget::initializeGL()
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 
     m_program = new QOpenGLShaderProgram;
-    m_program->addShaderFromSourceCode(QOpenGLShader::Vertex,  vertexShaderSource);
-    m_program->addShaderFromSourceCode(QOpenGLShader::Fragment, fragmentShaderSource);
+
+    m_program->addShaderFromSourceFile(QOpenGLShader::Vertex, ":/vertexShaderSource.vert");
+    m_program->addShaderFromSourceFile(QOpenGLShader::Fragment, ":/fragmentShaderSource.frag");
 
     if(m_program->link())
     {
