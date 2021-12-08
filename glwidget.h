@@ -26,7 +26,6 @@ class GLWidget : public QOpenGLWidget, protected QOpenGLFunctions
 public:
     GLWidget(QWidget *parent = 0);
     GLWidget(const GLWidget &);
-    GLWidget &operator=(const GLWidget &);
     ~GLWidget();
 
 public slots:
@@ -36,6 +35,11 @@ protected:
     void initializeGL() override;
     void paintGL() override;
     void resizeGL(int width, int height) override;
+
+    void wheelEvent(QWheelEvent *event) override;
+    void mousePressEvent(QMouseEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
+    void keyPressEvent(QKeyEvent *event) override;
 
 private:
     QSharedDataPointer<GLWidgetData> data;
@@ -47,8 +51,15 @@ private:
     QOpenGLShaderProgram *m_program;
 
     int t;
-    QMatrix4x4 m_camera;
-    QMatrix4x4 m_proj;
+    QPointF m_lastPos;
+    float m_cameraSpeed;
+    float m_yaw;	// yaw is initialized to -90.0 degrees since a yaw of 0.0 results in a direction vector pointing to the right so we initially rotate a bit to the left.
+    float m_pitch;
+    float m_fov;
+    int m_modelLoc, m_cameraLoc, m_projLoc;
+    glm::vec3 cameraPos, cameraFront, cameraUp;
+    glm::mat4 m_camera;
+    glm::mat4 m_proj;
     QMatrix4x4 m_world;
 };
 

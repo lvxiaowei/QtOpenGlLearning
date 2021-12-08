@@ -1,5 +1,9 @@
 ﻿#include "glwidget.h"
 #include <QOpenGLShaderProgram>
+#include <QKeyEvent>
+#include <QApplication>
+#include <QWheelEvent>
+
 #include <QDebug>
 
 class GLWidgetData : public QSharedData
@@ -10,20 +14,18 @@ public:
 
 GLWidget::GLWidget(QWidget *parent) : QOpenGLWidget(parent)
   , data(new GLWidgetData)
+  , m_cameraSpeed(0.1f)
 {
+    setFocusPolicy(Qt::ClickFocus);
 
+    cameraPos   = glm::vec3(0.0f, 0.0f,  3.0f);
+    cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+    cameraUp    = glm::vec3(0.0f, 1.0f,  0.0f);
 }
 
 GLWidget::GLWidget(const GLWidget &rhs) : data(rhs.data)
 {
 
-}
-
-GLWidget &GLWidget::operator=(const GLWidget &rhs)
-{
-    if (this != &rhs)
-        data.operator=(rhs.data);
-    return *this;
 }
 
 GLWidget::~GLWidget()
@@ -106,14 +108,14 @@ GLenum indices[] = {
 
 void GLWidget::initializeGL()
 {
-    QTimer *timer = new QTimer(this);
-    timer->setInterval(100);
-    connect(timer, &QTimer::timeout, [=]{
-        t +=1;
-        t = t%360;
-        update();
-    });
-    timer->start();
+    //    QTimer *timer = new QTimer(this);
+    //    timer->setInterval(10);
+    //    connect(timer, &QTimer::timeout, [=]{
+    //        t +=1;
+    //        t = t%360;
+    //        update();
+    //    });
+    //    timer->start();
 
     connect(context(), &QOpenGLContext::aboutToBeDestroyed, this, &GLWidget::cleanup);
 
@@ -133,6 +135,11 @@ void GLWidget::initializeGL()
     {
         qDebug("link failed");
     }
+
+    m_program->bind();
+    m_modelLoc = m_program->uniformLocation("model");
+    m_cameraLoc = m_program->uniformLocation("view");
+    m_projLoc = m_program->uniformLocation("projection");
 
     m_vao.create();
     m_vbo.create();
@@ -189,18 +196,11 @@ void GLWidget::paintGL()
     m_program->setUniformValue("texture1", 0);
     m_program->setUniformValue("texture2", 1);
 
-    glm::mat4 view = glm::mat4(1.0f);
-    float radius = 10.0f;
-    float camX = sin((t * M_PI)/180) * radius;
-    float camZ = cos((t * M_PI)/180) * radius;
-    view = glm::lookAt(glm::vec3(camX, 0.0, camZ), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
-    unsigned int view_i = m_program->uniformLocation("view");
-    glUniformMatrix4fv(view_i, 1, GL_FALSE, glm::value_ptr(view));
+    m_camera = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
 
-    glm::mat4 projection    = glm::mat4(1.0f);
-    projection = glm::perspective(glm::radians(45.0f), GLfloat(width()) / height(), 0.1f, 100.0f);
-    unsigned int projection_i = m_program->uniformLocation("projection");
-    glUniformMatrix4fv(projection_i, 1, GL_FALSE, glm::value_ptr(projection));
+    glUniformMatrix4fv(m_cameraLoc, 1, GL_FALSE, glm::value_ptr(m_camera));
+
+    glUniformMatrix4fv(m_projLoc, 1, GL_FALSE, glm::value_ptr(m_proj));
 
     for(int i=0; i < 10; ++i)
     {
@@ -209,9 +209,7 @@ void GLWidget::paintGL()
 
         float angle = 20.0f * i;
         model = glm::rotate(model,  glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
-
-        unsigned int transformLoc_i = m_program->uniformLocation("model");
-        glUniformMatrix4fv(transformLoc_i, 1, GL_FALSE, glm::value_ptr(model));
+        glUniformMatrix4fv(m_modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
         glDrawArrays(GL_TRIANGLES, 0, 36);
     }
@@ -222,6 +220,73 @@ void GLWidget::paintGL()
 
 void GLWidget::resizeGL(int w, int h)
 {
-    m_proj.setToIdentity();
-    m_proj.perspective(45.0f, GLfloat(w) / h, 0.01f, 100.0f);
+    m_proj = glm::mat4(1.0f);
+    m_proj = glm::perspective(glm::radians(45.0f), GLfloat(w) / h, 0.1f, 100.0f);
+}
+
+//旋转,可以沿着X Y Z轴旋转
+void GLWidget::mousePressEvent(QMouseEvent *event)
+{
+    m_lastPos = event->localPos();
+}
+
+void GLWidget::mouseMoveEvent(QMouseEvent *event)
+{
+    float xoffset = event->x() - m_lastPos.x();
+    float yoffset = m_lastPos.y() - event->y(); // reversed since y-coordinates go from bottom to top
+
+    float sensitivity = 0.1f; // change this value to your liking
+    xoffset *= sensitivity;
+    yoffset *= sensitivity;
+
+    m_yaw = xoffset - 90.0f;
+    m_pitch = yoffset;
+
+    // make sure that when pitch is out of bounds, screen doesn't get flipped
+    if (m_pitch > 89.0f)
+        m_pitch = 89.0f;
+    if (m_pitch < -89.0f)
+        m_pitch = -89.0f;
+
+    glm::vec3 front;
+    front.x = cos(glm::radians(m_yaw)) * cos(glm::radians(m_pitch));
+    front.y = sin(glm::radians(m_pitch));
+    front.z = sin(glm::radians(m_yaw)) * cos(glm::radians(m_pitch));
+    cameraFront = glm::normalize(front);
+
+    update();
+}
+
+//前后移动
+void GLWidget::wheelEvent(QWheelEvent *event)
+{
+    if(QApplication::keyboardModifiers () == Qt::ControlModifier)
+    {
+        event->delta() > 0  ? cameraPos += m_cameraSpeed * cameraFront : cameraPos -= m_cameraSpeed * cameraFront;
+        update();
+    }
+    else
+    {
+        QWidget::wheelEvent(event);
+    }
+}
+
+//上下左右控制
+void GLWidget::keyPressEvent(QKeyEvent *event)
+{
+    switch (event->key()) {
+    case Qt::Key_Up:
+        cameraPos += m_cameraSpeed * cameraUp;
+        break;
+    case Qt::Key_Down:
+        cameraPos -= m_cameraSpeed * cameraUp;
+        break;
+    case Qt::Key_Left:
+        cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * m_cameraSpeed;
+        break;
+    case Qt::Key_Right:
+        cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * m_cameraSpeed;
+        break;
+    }
+    update();
 }
